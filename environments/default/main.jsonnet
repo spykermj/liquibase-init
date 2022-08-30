@@ -1,8 +1,9 @@
 local k = import 'github.com/grafana/jsonnet-libs/ksonnet-util/kausal.libsonnet';
 
 {
-  _config:: {
+  _config+:: {
     hello: {
+      secrets: import 'secrets.jsonnet',
       port: 5000,
       name: 'hello-flask',
       init: {
@@ -18,6 +19,10 @@ local k = import 'github.com/grafana/jsonnet-libs/ksonnet-util/kausal.libsonnet'
             --comment: create database
             CREATE DATABASE "exampledb";
             --rollback DROP DATABASE "exampledb";
+
+            --changeset jeremyspykerman:2
+            CREATE USER "${db.username}" WITH LOGIN ENCRYPTED PASSWORD '${db.password}';
+            --rollback DROP USER "exampleuser";
           |||,
           'bootstrap.properties': |||
             url: jdbc:postgresql://192.168.1.101:5432/postgres
@@ -35,6 +40,10 @@ local k = import 'github.com/grafana/jsonnet-libs/ksonnet-util/kausal.libsonnet'
         'update',
         '--password',
         'notasecret',
+        '-D',
+        'db.username=%s' % $._config.hello.secrets.db.username,
+        '-D',
+        'db.password=%s' % $._config.hello.secrets.db.password,
       ],
     },
   },
